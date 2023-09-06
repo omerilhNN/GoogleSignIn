@@ -23,6 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.identity.Identity
+import com.omrilhn.googlesignin.presentation.profile.ProfileScreen
 import com.omrilhn.googlesignin.presentation.sign_in.GoogleAuthUiClient
 import com.omrilhn.googlesignin.presentation.sign_in.SignInScreen
 import com.omrilhn.googlesignin.presentation.sign_in.SignInViewModel
@@ -49,8 +50,15 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     NavHost(navController = navController, startDestination = "sign_in" ){
                         composable("sign_in"){
+                            
                             val viewModel = viewModel<SignInViewModel>()
                             val state by viewModel.state.collectAsStateWithLifecycle()
+                            
+                            LaunchedEffect(key1 = Unit){
+                                if(googleAuthUiClient.getSignedInUser() != null){
+                                    navController.navigate("profile")
+                                }
+                            }
 
                             val launcher = rememberLauncherForActivityResult(
                                 contract = ActivityResultContracts.StartIntentSenderForResult() , //what we want to do with that launcher
@@ -73,11 +81,12 @@ class MainActivity : ComponentActivity() {
                                         "Sign in Succesful",
                                         Toast.LENGTH_LONG
                                     ).show()
+
+                                    navController.navigate("profile")
+                                    viewModel.resetState()
                                 }
 
                             }
-
-
                             SignInScreen(
                                 state =state,
                                 onSignInClick = {
@@ -87,7 +96,18 @@ class MainActivity : ComponentActivity() {
                                             IntentSenderRequest.Builder(
                                                 signInIntentSender ?: return@launch //if thats null return at laucnh
                                             ).build() // if its not null then pass that intentsenderrequest to our launcher
-                                        )
+                                        )}
+                                })
+                        }
+                        composable("profile"){
+                            ProfileScreen(userData = googleAuthUiClient.getSignedInUser(),
+                                onSignOut = {
+                                    lifecycleScope.launch {
+                                        googleAuthUiClient.signOut()
+                                        Toast.makeText(applicationContext,
+                                            "Signed Out",
+                                            Toast.LENGTH_LONG).show()
+                                        navController.popBackStack()
                                     }
                                 })
                         }
